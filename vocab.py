@@ -151,7 +151,7 @@ class Glove840B(Vocab):
         df = pd.read_table(self.download_file, sep=" ", index_col=0, header=None, quoting=csv.QUOTE_NONE)
         itow = list(df.index)
         wtoi = {w: i for i, w in enumerate(itow)}
-        weights = df.as_matrix()
+        weights = df.values
 
         return wtoi, itow, weights
 
@@ -165,7 +165,7 @@ class Glove6B(Vocab):
         df = pd.read_table(self.download_file, sep=" ", index_col=0, header=None, quoting=csv.QUOTE_NONE)
         itow = list(df.index)
         wtoi = {w: i for i, w in enumerate(itow)}
-        weights = df.as_matrix()
+        weights = df.values
 
         return wtoi, itow, weights
 

@@ -20,11 +20,11 @@ tf.get_logger().setLevel(logging.ERROR)
 PROJECT_DIR = Path(__file__).parent.parent
 
 def flags2params(flags, customized_params=None):
-    if customized_params:
+    if customized_params is not None:
         flags.__dict__.update(customized_params)
 
     flags.checkpoint_dir = Path(flags.checkpoint_dir) / flags.language / flags.task
-    flags.output_dir.mkdir(parents=True, exist_ok=True)
+    Path(flags.output_dir).mkdir(parents=True, exist_ok=True)
     flags.best_model_dir = Path(flags.best_model_dir) / flags.language / flags.task
     flags.language = vocab.Language[flags.language]
     flags.task = data.Task[flags.task]
@@ -54,9 +54,9 @@ class TrainingHelper(object):
             datetime.datetime.now().strftime('%b-%d_%H-%M-%S-%f'))
         assert not (params.log_dir / self.run_name).is_dir(), "The run %s has existed in Log Path %s" % (
         self.run_name, params.log_dir)
-        self.checkpoint_dir = params.checkpoint_dir / self.run_name / "model"
-        self.best_model_dir = params.best_model_dir / self.run_name / "best"
-        self.output_dir = params.output_dir
+        self.checkpoint_dir = Path(params.checkpoint_dir) / self.run_name / "model"
+        self.best_model_dir = Path(params.best_model_dir) / self.run_name / "best"
+        self.output_dir = Path(params.output_dir)
 
         # Loading dataset
         train_path, dev_path, test_path, vocab = prepare_data_and_vocab(
@@ -91,7 +91,7 @@ class TrainingHelper(object):
         self.dev_iterator = build_dataset_op(dev_dataset, pad_idx, params.batch_size, is_train=False)
         self.dev_batch = self.dev_iterator.get_next()
 
-        if test_path:
+        if test_path is not None:
             raw_test = json.load(test_path.open())
             test_dataset = process_raw_data(
                 raw_test,
@@ -113,16 +113,16 @@ class TrainingHelper(object):
         self.inference_mode = False
         self.num_epoch = params.num_epoch
 
-        if params.resume_dir:
+        if params.resume_dir is not None:
             self.model.load_model(params.resume_dir)
-            if params.infer_test:
+            if params.infer_test is not None:
                 self.inference_mode = True
             self.logger.info("Inference_mode: On")
 
-        if log_to_tensorboard:
+        if log_to_tensorboard is not None:
             self.log_to_tensorboard = log_to_tensorboard
             self.log_writer = tf.summary.FileWriter(
-                str(params.log_dir / self.run_name),
+                str(Path(params.log_dir) / self.run_name),
                 sess.graph,
                 flush_secs=20)
 
@@ -136,7 +136,7 @@ class TrainingHelper(object):
         return train_loss
 
     def load_best_model(self):
-        self.model.load_model(self.best_model_dir.parent.resolve())
+        self.model.load_model(Path(self.best_model_dir).parent.resolve())
 
     def train(self, num_epoch=None, optimization_mode="max"):
         best_score = float("inf") if optimization_mode == "min" else -float("inf")
@@ -153,7 +153,7 @@ class TrainingHelper(object):
             curr_score = self.metrics_to_single_value(metrics)
 
             self.logger.info(" Dev scores (-log): %s" % metrics[self.task.name])
-            if self.log_to_tensorboard:
+            if self.log_to_tensorboard is not None:
                 self.write_to_summary(metrics, epoch)
 
             if (model == "min" and curr_score < best_score) or (
@@ -200,9 +200,9 @@ class TrainingHelper(object):
         predictions = self.model.predict(self.test_iterator.initializer, self.test_batch)
         submission = self.__predictions_to_submission_format(predictions)
 
-        if write_to_file:
-            output_file = trainer.output_dir / ("%s_%s_test_submission.json" % (self.task.name, self.language.name))
-            output_file.parent.mkdir(parents=True, exist_ok=True)
+        if write_to_file is not None:
+            output_file = Path(trainer.output_dir) / ("%s_%s_test_submission.json" % (self.task.name, self.language.name))
+            Path(output_file).parent.mkdir(parents=True, exist_ok=True)
             json.dump(submission, output_file.open("w"))
 
         return submission
